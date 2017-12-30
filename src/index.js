@@ -67,6 +67,41 @@ bot.onText(/\/start/, msg => {
 
 });
 
+bot.onText(/\/f(.+)/, (msg, [source, match]) => {
+	const filmUuid = helper.getItemUuid(source);
+	const chatId = helper.getChatId(msg);
+
+	Film.findOne({uuid: filmUuid}).then(film => {
+
+		const caption = `Название: ${film.name}\nГод: ${film.year}\nРейтинг: ${film.rate}\nДлительность: ${film.length}\nСтрана: ${film.country}`;
+
+		bot.sendPhoto(chatId, film.picture, {
+			caption: caption,
+			reply_markup: {
+				inline_keyboard: [
+					[
+						{
+							text: 'Добавить в избранное',
+							callback_data: film.uuid
+						},
+						{
+							text: 'Показать кинотеатры',
+							callback_data: film.uuid
+						}
+					],
+					[
+						{
+							text: `Кинопоиск ${film.name}`,
+							url: film.link
+						}
+					]
+
+				]
+			}
+		})
+	})
+});
+
 // ===============================
 function sendFilmsByQuery(chatId, query) {
 	Film.find(query).then(films => {
