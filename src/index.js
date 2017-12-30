@@ -36,6 +36,15 @@ bot.on('message', msg => {
 			bot.sendMessage(chatId, `Выберите жанр:`, {
 				reply_markup: {keyboard: keyboard.films}
 			});
+			break
+		case kb.film.comedy:
+			sendFilmsByQuery(chatId, {type: 'comedy'});
+			break;
+		case kb.film.action:
+			sendFilmsByQuery(chatId, {type: 'action'});
+			break;
+		case kb.film.random:
+			sendFilmsByQuery(chatId, {});
 			break;
 		case kb.home.cinemas:
 			break;
@@ -43,7 +52,7 @@ bot.on('message', msg => {
 			bot.sendMessage(chatId, `Что хотите посмотреть?`, {
 				reply_markup: {keyboard: keyboard.home}
 			});
-			break;
+			break
 	}
 });
 
@@ -57,3 +66,10 @@ bot.onText(/\/start/, msg => {
 	})
 
 });
+
+// ===============================
+function sendFilmsByQuery(chatId, query) {
+	Film.find(query).then(films => {
+		console.log(films)
+	})
+}
