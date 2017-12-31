@@ -1,5 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
+const geolib = require('geolib');
+const _ = require('lodash');
 const config = require('./config');
 const helper = require('./helper');
 const keyboard = require('./keyboard');
@@ -63,7 +65,7 @@ bot.on('message', msg => {
 			break
 	}
 	if (msg.location) {
-		console.log(msg.location);
+		getCinemasInCoord(chatId, msg.location);
 	}
 });
 
@@ -133,7 +135,26 @@ function sendHTML(chatId, html, kbName = null) {
 		options['reply_markup'] = {
 			keyboard: keyboard[kbName]
 		}
-	};
+	}
 
 	bot.sendMessage(chatId, html, options);
+}
+
+function getCinemasInCoord(chatId, location) {
+
+	Cinema.find({}).then(cinemas => {
+
+		cinemas.forEach(c => {
+			c.distance = geolib.getDistance(location, c.location) / 1000
+		});
+
+		cinemas = _.sortBy(cinemas, 'distance');
+
+		const html = cinemas.map((c, i) => {
+			return `<b>${i + 1}</b> ${c.name}. <em>Расстояние</em> - <strong>${c.distance}</strong> км. /c${c.uuid}`
+		}).join('\n');
+
+		sendHTML(chatId, html, 'home')
+	})
+
 }
