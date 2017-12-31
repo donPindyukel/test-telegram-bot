@@ -45,12 +45,13 @@ bot.on('message', msg => {
 
 	switch (msg.text) {
 		case kb.home.favourite:
+			showFavouriteFilms(chatId, msg.from.id);
 			break;
 		case kb.home.films:
 			bot.sendMessage(chatId, `Выберите жанр:`, {
 				reply_markup: {keyboard: keyboard.films}
 			});
-			break
+			break;
 		case kb.film.comedy:
 			sendFilmsByQuery(chatId, {type: 'comedy'});
 			break;
@@ -265,7 +266,7 @@ function toggleFavouriteFilm(userId, queryId, {filmUuid, isFav}) {
 				})
 			}
 
-			const answerText = isFav ? 'Удалено' : 'Добавлено'
+			const answerText = isFav ? 'Удалено' : 'Добавлено';
 
 			userPromise.save().then(_ => {
 				bot.answerCallbackQuery({
@@ -274,4 +275,28 @@ function toggleFavouriteFilm(userId, queryId, {filmUuid, isFav}) {
 				})
 			}).catch(err => console.log(err))
 		}).catch(err => console.log(err))
+}
+
+function showFavouriteFilms(chatId, telegramId) {
+	User.findOne({telegramId})
+		.then(user => {
+			if (user) {
+				Film.find({uuid: {'$in': user.films}}).then(films => {
+					let html;
+
+					if (films.length) {
+						html = films.map((f, i) => {
+							return `<b>${i + 1}</b> ${f.name} - <b>${f.rate}</b> (/f${f.uuid})`
+						}).join('\n')
+					} else {
+						html = 'Вы пока ничего не добавили'
+					}
+
+					sendHTML(chatId, html, 'home')
+				}).catch(e => console.log(e))
+			} else {
+				sendHTML(chatId, 'Вы пока ничего не добавили', 'home')
+			}
+
+		}).catch(e => console.log(e))
 }
