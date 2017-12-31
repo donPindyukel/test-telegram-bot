@@ -16,6 +16,7 @@ module.exports = {
 				text: 'Отправить местоположение',
 				request_location: true
 			}
-		]
+		],
+		[kb.back]
 	]
 };
