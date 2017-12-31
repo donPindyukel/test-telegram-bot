@@ -79,6 +79,7 @@ bot.on('message', msg => {
 });
 
 bot.on('callback_query', query => {
+	const userId = query.from.id;
 	let data;
 	try {
 		data = JSON.parse(query.data)
@@ -93,7 +94,7 @@ bot.on('callback_query', query => {
 	} else if (type === ACTION_TYPE.SHOW_CINEMAS) {
 
 	} else if (type === ACTION_TYPE.TOGGLE_FAV_FILM) {
-
+		toggleFavouriteFilm(userId, query.id, data);
 	} else if (type === ACTION_TYPE.SHOW_FILMS) {
 
 	}
@@ -114,8 +115,18 @@ bot.onText(/\/f(.+)/, (msg, [source, match]) => {
 	const filmUuid = helper.getItemUuid(source);
 	const chatId = helper.getChatId(msg);
 
-	Film.findOne({uuid: filmUuid}).then(film => {
+	Promise.all([
+		Film.findOne({uuid: filmUuid}),
+		User.findOne({telegramId: msg.from.id})
+	]).then(([film, user]) => {
 
+		let isFav = false;
+
+		if (user) {
+			isFav = user.films.indexOf(film.uuid) !== -1;
+		}
+
+		const favText = isFav ? 'Удалить из избранного' : 'Добавить в избранное';
 		const caption = `Название: ${film.name}\nГод: ${film.year}\nРейтинг: ${film.rate}\nДлительность: ${film.length}\nСтрана: ${film.country}`;
 
 		bot.sendPhoto(chatId, film.picture, {
@@ -124,10 +135,11 @@ bot.onText(/\/f(.+)/, (msg, [source, match]) => {
 				inline_keyboard: [
 					[
 						{
-							text: 'Добавить в избранное',
+							text: favText,
 							callback_data: JSON.stringify({
 								type: ACTION_TYPE.TOGGLE_FAV_FILM,
-								filmUuid: film.uuid
+								filmUuid: film.uuid,
+								isFav: isFav
 							})
 						},
 						{
@@ -231,4 +243,35 @@ function getCinemasInCoord(chatId, location) {
 		sendHTML(chatId, html, 'home')
 	})
 
+}
+
+function toggleFavouriteFilm(userId, queryId, {filmUuid, isFav}) {
+
+	let userPromise
+
+	User.findOne({telegramId: userId})
+		.then(user => {
+			if (user) {
+				if (isFav) {
+					user.films = user.films.filter(fUuid => fUuid !== filmUuid)
+				} else {
+					user.films.push(filmUuid)
+				}
+				userPromise = user
+			} else {
+				userPromise = new User({
+					telegramId: userId,
+					films: [filmUuid]
+				})
+			}
+
+			const answerText = isFav ? 'Удалено' : 'Добавлено'
+
+			userPromise.save().then(_ => {
+				bot.answerCallbackQuery({
+					callback_query_id: queryId,
+					text: answerText
+				})
+			}).catch(err => console.log(err))
+		}).catch(err => console.log(err))
 }
